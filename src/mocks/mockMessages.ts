@@ -1,6 +1,7 @@
 /**
  * Mock Messages/Conversations Data for SummerHub Messaging
  * Contains 5 conversations to populate messaging when backend is unavailable
+ * DEFENSIVE: All operations protected against undefined/null/empty arrays
  */
 
 export interface Message {
@@ -135,7 +136,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: "Great! See you at the study session tomorrow at 5 PM in the library.",
     lastMessageTime: "2026-06-24T15:30:00Z",
     unreadCount: 1,
-    messages: MOCK_MESSAGES_DATA.filter((m) => m.recipientId === 1 || m.senderId === 1)
+    messages: Array.isArray(MOCK_MESSAGES_DATA)
+      ? MOCK_MESSAGES_DATA.filter((m) => m && (m.recipientId === 1 || m.senderId === 1))
+      : []
   },
   {
     id: 2,
@@ -145,7 +148,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: "No problem! Let me know if you need anything else for your applications.",
     lastMessageTime: "2026-06-24T14:20:00Z",
     unreadCount: 0,
-    messages: MOCK_MESSAGES_DATA.filter((m) => m.recipientId === 2 || m.senderId === 2)
+    messages: Array.isArray(MOCK_MESSAGES_DATA)
+      ? MOCK_MESSAGES_DATA.filter((m) => m && (m.recipientId === 2 || m.senderId === 2))
+      : []
   },
   {
     id: 3,
@@ -155,7 +160,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: "That would be amazing! Are you free this weekend?",
     lastMessageTime: "2026-06-24T13:50:00Z",
     unreadCount: 2,
-    messages: MOCK_MESSAGES_DATA.filter((m) => m.recipientId === 7 || m.senderId === 7)
+    messages: Array.isArray(MOCK_MESSAGES_DATA)
+      ? MOCK_MESSAGES_DATA.filter((m) => m && (m.recipientId === 7 || m.senderId === 7))
+      : []
   },
   {
     id: 4,
@@ -165,7 +172,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: "We're working on it! Should have it done by end of week.",
     lastMessageTime: "2026-06-24T12:25:00Z",
     unreadCount: 0,
-    messages: MOCK_MESSAGES_DATA.filter((m) => m.recipientId === 4 || m.senderId === 4)
+    messages: Array.isArray(MOCK_MESSAGES_DATA)
+      ? MOCK_MESSAGES_DATA.filter((m) => m && (m.recipientId === 4 || m.senderId === 4))
+      : []
   },
   {
     id: 5,
@@ -175,7 +184,9 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: "I'd love to learn guitar! When's your next free lesson?",
     lastMessageTime: "2026-06-24T11:00:00Z",
     unreadCount: 1,
-    messages: MOCK_MESSAGES_DATA.filter((m) => m.recipientId === 10 || m.senderId === 10)
+    messages: Array.isArray(MOCK_MESSAGES_DATA)
+      ? MOCK_MESSAGES_DATA.filter((m) => m && (m.recipientId === 10 || m.senderId === 10))
+      : []
   }
 ];
 
@@ -184,7 +195,10 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
  */
 export const getAllConversations = (): Promise<Conversation[]> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve([...MOCK_CONVERSATIONS]), 300);
+    setTimeout(() => {
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      resolve([...conversations]);
+    }, 300);
   });
 };
 
@@ -194,7 +208,8 @@ export const getAllConversations = (): Promise<Conversation[]> => {
 export const getConversationById = (id: number): Promise<Conversation | null> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const conversation = MOCK_CONVERSATIONS.find((c) => c.id === id);
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      const conversation = conversations.find((c) => c && c.id === id);
       resolve(conversation ? { ...conversation } : null);
     }, 200);
   });
@@ -206,8 +221,10 @@ export const getConversationById = (id: number): Promise<Conversation | null> =>
 export const getConversationMessages = (conversationId: number): Promise<Message[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const conversation = MOCK_CONVERSATIONS.find((c) => c.id === conversationId);
-      resolve(conversation ? [...conversation.messages] : []);
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      const conversation = conversations.find((c) => c && c.id === conversationId);
+      const messages = conversation && Array.isArray(conversation.messages) ? conversation.messages : [];
+      resolve([...messages]);
     }, 250);
   });
 };
@@ -223,8 +240,12 @@ export const sendMessage = (
 ): Promise<Message> => {
   return new Promise((resolve) => {
     setTimeout(() => {
+      const messages = Array.isArray(MOCK_MESSAGES_DATA) ? MOCK_MESSAGES_DATA : [];
+      const maxId = messages.length > 0
+        ? Math.max(...messages.map((m) => m?.id || 0))
+        : 0;
       const newMessage: Message = {
-        id: Math.max(...MOCK_MESSAGES_DATA.map((m) => m.id)) + 1,
+        id: maxId + 1,
         senderId: currentUserId,
         senderName: currentUserName,
         recipientId: participantId,
@@ -232,11 +253,14 @@ export const sendMessage = (
         timestamp: new Date().toISOString(),
         isRead: false
       };
-      MOCK_MESSAGES_DATA.push(newMessage);
+      if (Array.isArray(MOCK_MESSAGES_DATA)) {
+        MOCK_MESSAGES_DATA.push(newMessage);
+      }
 
       // Update conversation
-      const conversation = MOCK_CONVERSATIONS.find((c) => c.participantId === participantId);
-      if (conversation) {
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      const conversation = conversations.find((c) => c && c.participantId === participantId);
+      if (conversation && Array.isArray(conversation.messages)) {
         conversation.lastMessage = content;
         conversation.lastMessageTime = newMessage.timestamp;
         conversation.messages.push(newMessage);
@@ -253,10 +277,11 @@ export const sendMessage = (
 export const markConversationAsRead = (conversationId: number): Promise<void> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const conversation = MOCK_CONVERSATIONS.find((c) => c.id === conversationId);
-      if (conversation) {
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      const conversation = conversations.find((c) => c && c.id === conversationId);
+      if (conversation && Array.isArray(conversation.messages)) {
         conversation.messages.forEach((m) => {
-          if (m.recipientId === 0) {
+          if (m && m.recipientId === 0) {
             m.isRead = true;
           }
         });
@@ -273,9 +298,12 @@ export const markConversationAsRead = (conversationId: number): Promise<void> =>
 export const searchConversations = (query: string): Promise<Conversation[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_CONVERSATIONS.filter((c) =>
-        c.participantName.toLowerCase().includes(query.toLowerCase()) ||
-        c.lastMessage.toLowerCase().includes(query.toLowerCase())
+      const conversations = Array.isArray(MOCK_CONVERSATIONS) ? MOCK_CONVERSATIONS : [];
+      const results = conversations.filter(
+        (c) =>
+          c &&
+          (c.participantName?.toLowerCase().includes(query.toLowerCase()) ||
+            c.lastMessage?.toLowerCase().includes(query.toLowerCase()))
       );
       resolve(results);
     }, 250);

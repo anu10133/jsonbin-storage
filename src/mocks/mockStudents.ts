@@ -1,6 +1,7 @@
 /**
  * Mock Student Data for SummerHub Directory
  * Contains 11 students to populate the directory when backend is unavailable
+ * DEFENSIVE: All operations protected against undefined/null/empty arrays
  */
 
 export interface Student {
@@ -132,7 +133,10 @@ export const MOCK_STUDENTS: Student[] = [
  */
 export const getAllStudents = (): Promise<Student[]> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve([...MOCK_STUDENTS]), 300);
+    setTimeout(() => {
+      const students = Array.isArray(MOCK_STUDENTS) ? MOCK_STUDENTS : [];
+      resolve([...students]);
+    }, 300);
   });
 };
 
@@ -142,7 +146,8 @@ export const getAllStudents = (): Promise<Student[]> => {
 export const getStudentById = (id: number): Promise<Student | null> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const student = MOCK_STUDENTS.find((s) => s.id === id);
+      const students = Array.isArray(MOCK_STUDENTS) ? MOCK_STUDENTS : [];
+      const student = students.find((s) => s && s.id === id);
       resolve(student || null);
     }, 200);
   });
@@ -154,10 +159,13 @@ export const getStudentById = (id: number): Promise<Student | null> => {
 export const searchStudents = (query: string): Promise<Student[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_STUDENTS.filter((s) =>
-        s.name.toLowerCase().includes(query.toLowerCase()) ||
-        s.major.toLowerCase().includes(query.toLowerCase()) ||
-        s.interests.some((i) => i.toLowerCase().includes(query.toLowerCase()))
+      const students = Array.isArray(MOCK_STUDENTS) ? MOCK_STUDENTS : [];
+      const results = students.filter((s) =>
+        s &&
+        (s.name?.toLowerCase().includes(query.toLowerCase()) ||
+          s.major?.toLowerCase().includes(query.toLowerCase()) ||
+          (Array.isArray(s.interests) &&
+            s.interests.some((i) => i?.toLowerCase().includes(query.toLowerCase()))))
       );
       resolve(results);
     }, 250);
@@ -170,8 +178,9 @@ export const searchStudents = (query: string): Promise<Student[]> => {
 export const getStudentsByMajor = (major: string): Promise<Student[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_STUDENTS.filter((s) =>
-        s.major.toLowerCase().includes(major.toLowerCase())
+      const students = Array.isArray(MOCK_STUDENTS) ? MOCK_STUDENTS : [];
+      const results = students.filter((s) =>
+        s && s.major?.toLowerCase().includes(major.toLowerCase())
       );
       resolve(results);
     }, 250);
@@ -184,7 +193,8 @@ export const getStudentsByMajor = (major: string): Promise<Student[]> => {
 export const getStudentsByYear = (year: string): Promise<Student[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_STUDENTS.filter((s) => s.year === year);
+      const students = Array.isArray(MOCK_STUDENTS) ? MOCK_STUDENTS : [];
+      const results = students.filter((s) => s && s.year === year);
       resolve(results);
     }, 250);
   });
