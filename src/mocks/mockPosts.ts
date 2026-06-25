@@ -1,6 +1,7 @@
 /**
  * Mock Posts/Announcements Data for SummerHub Noticeboard
  * Contains 10 announcements to populate the noticeboard when backend is unavailable
+ * DEFENSIVE: All operations protected against undefined/null/empty arrays
  */
 
 export interface Post {
@@ -60,7 +61,7 @@ export const MOCK_POSTS: Post[] = [
     authorId: 4,
     authorName: "David Brown",
     title: "Campus Robotics Competition - Team Registration Open",
-    content: "Sign up your team for the annual robotics competition! Teams of 4-6 members. Registration closes July 10th. Prize pool: $5000. First place gets $2500. Event details: https://campus.robotics.edu",
+    content: "Sign up your team for the annual robotics competition! Teams of 4-6 members. Registration closes July 10th. Prize pool: $5000. First place gets $2500. Event details: https://campus.robotics.io",
     category: "Events",
     timestamp: "2026-06-24T11:45:00Z",
     upvotes: 42
@@ -132,9 +133,15 @@ export const MOCK_POSTS: Post[] = [
  */
 export const getAllPosts = (): Promise<Post[]> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve([...MOCK_POSTS].sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    )), 300);
+    setTimeout(() => {
+      const posts = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
+      const sorted = posts.length > 0
+        ? [...posts].sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          )
+        : [];
+      resolve(sorted);
+    }, 300);
   });
 };
 
@@ -144,9 +151,12 @@ export const getAllPosts = (): Promise<Post[]> => {
 export const getPostsByCategory = (category: PostCategory): Promise<Post[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_POSTS.filter((p) => p.category === category).sort((a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      const posts = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
+      const results = posts
+        .filter((p) => p && p.category === category)
+        .sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
       resolve(results);
     }, 250);
   });
@@ -158,13 +168,18 @@ export const getPostsByCategory = (category: PostCategory): Promise<Post[]> => {
 export const searchPosts = (query: string): Promise<Post[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const results = MOCK_POSTS.filter((p) =>
-        p.title.toLowerCase().includes(query.toLowerCase()) ||
-        p.content.toLowerCase().includes(query.toLowerCase()) ||
-        p.authorName.toLowerCase().includes(query.toLowerCase())
-      ).sort((a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      const posts = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
+      const results = posts
+        .filter(
+          (p) =>
+            p &&
+            (p.title?.toLowerCase().includes(query.toLowerCase()) ||
+              p.content?.toLowerCase().includes(query.toLowerCase()) ||
+              p.authorName?.toLowerCase().includes(query.toLowerCase()))
+        )
+        .sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
       resolve(results);
     }, 250);
   });
@@ -182,8 +197,12 @@ export const createPost = (
 ): Promise<Post> => {
   return new Promise((resolve) => {
     setTimeout(() => {
+      const posts = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
+      const maxId = posts.length > 0
+        ? Math.max(...posts.map((p) => p?.id || 0))
+        : 0;
       const newPost: Post = {
-        id: Math.max(...MOCK_POSTS.map((p) => p.id)) + 1,
+        id: maxId + 1,
         title,
         content,
         category,
@@ -192,7 +211,9 @@ export const createPost = (
         timestamp: new Date().toISOString(),
         upvotes: 0
       };
-      MOCK_POSTS.unshift(newPost);
+      if (Array.isArray(MOCK_POSTS)) {
+        MOCK_POSTS.unshift(newPost);
+      }
       resolve(newPost);
     }, 200);
   });
@@ -204,9 +225,10 @@ export const createPost = (
 export const upvotePost = (postId: number): Promise<Post | null> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const post = MOCK_POSTS.find((p) => p.id === postId);
+      const posts = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
+      const post = posts.find((p) => p && p.id === postId);
       if (post) {
-        post.upvotes += 1;
+        post.upvotes = (post.upvotes || 0) + 1;
         resolve({ ...post });
       } else {
         resolve(null);
@@ -219,13 +241,19 @@ export const upvotePost = (postId: number): Promise<Post | null> => {
  * Get all available categories
  */
 export const getCategories = (): PostCategory[] => {
-  return [
-    "Announcements",
-    "Study Groups",
-    "Events",
-    "Marketplace",
-    "Lost & Found",
-    "Services",
-    "Clubs"
-  ];
+  try {
+    const categories: PostCategory[] = [
+      "Announcements",
+      "Study Groups",
+      "Events",
+      "Marketplace",
+      "Lost & Found",
+      "Services",
+      "Clubs"
+    ];
+    return Array.isArray(categories) ? categories : [];
+  } catch (error) {
+    console.error("Error getting categories:", error);
+    return [];
+  }
 };

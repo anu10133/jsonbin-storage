@@ -2,6 +2,7 @@
  * Mock API Service for SummerHub
  * Unified API service that tries backend first, falls back to mock data
  * Exports all functions needed for Directory, Noticeboard, and Messaging
+ * DEFENSIVE: All responses validated and defaulted to safe values
  */
 
 // Import mock data
@@ -21,7 +22,10 @@ const TIMEOUT = 5000; // 5 second timeout for backend calls
 /**
  * Fetch with timeout
  */
-const fetchWithTimeout = async (url: string, options: RequestInit = {}): Promise<Response> => {
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
@@ -30,6 +34,28 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}): Promise
   } finally {
     clearTimeout(timeoutId);
   }
+};
+
+/**
+ * Defensive response validator - ensures responses are valid arrays
+ */
+const validateArrayResponse = <T>(data: unknown): T[] => {
+  if (Array.isArray(data)) {
+    return data as T[];
+  }
+  console.warn("API returned non-array response, using empty array fallback", data);
+  return [];
+};
+
+/**
+ * Defensive single object validator
+ */
+const validateObjectResponse = <T>(data: unknown): T | null => {
+  if (data !== null && typeof data === "object") {
+    return data as T;
+  }
+  console.warn("API returned invalid object response, using null fallback", data);
+  return null;
 };
 
 // ==================== DIRECTORY API ====================
@@ -42,12 +68,19 @@ export const directoryApi = {
     try {
       const response = await fetchWithTimeout(`${API_BASE_URL}/students`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn("Backend unavailable for getStudents, using mock data");
     }
-    return studentsMock.getAllStudents();
+    try {
+      const data = await studentsMock.getAllStudents();
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error("Error fetching mock students:", error);
+      return [];
+    }
   },
 
   /**
@@ -57,12 +90,19 @@ export const directoryApi = {
     try {
       const response = await fetchWithTimeout(`${API_BASE_URL}/students/${id}`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateObjectResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for getStudentById(${id}), using mock data`);
     }
-    return studentsMock.getStudentById(id);
+    try {
+      const data = await studentsMock.getStudentById(id);
+      return validateObjectResponse(data);
+    } catch (error) {
+      console.error(`Error fetching mock student ${id}:`, error);
+      return null;
+    }
   },
 
   /**
@@ -74,12 +114,19 @@ export const directoryApi = {
         `${API_BASE_URL}/students/search?q=${encodeURIComponent(query)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for searchStudents("${query}"), using mock data`);
     }
-    return studentsMock.searchStudents(query);
+    try {
+      const data = await studentsMock.searchStudents(query);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error searching mock students:`, error);
+      return [];
+    }
   },
 
   /**
@@ -91,12 +138,19 @@ export const directoryApi = {
         `${API_BASE_URL}/students/major/${encodeURIComponent(major)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for getStudentsByMajor("${major}"), using mock data`);
     }
-    return studentsMock.getStudentsByMajor(major);
+    try {
+      const data = await studentsMock.getStudentsByMajor(major);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error filtering mock students by major:`, error);
+      return [];
+    }
   },
 
   /**
@@ -108,12 +162,19 @@ export const directoryApi = {
         `${API_BASE_URL}/students/year/${encodeURIComponent(year)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for getStudentsByYear("${year}"), using mock data`);
     }
-    return studentsMock.getStudentsByYear(year);
+    try {
+      const data = await studentsMock.getStudentsByYear(year);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error filtering mock students by year:`, error);
+      return [];
+    }
   }
 };
 
@@ -127,12 +188,19 @@ export const noticeboardApi = {
     try {
       const response = await fetchWithTimeout(`${API_BASE_URL}/posts`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn("Backend unavailable for getPosts, using mock data");
     }
-    return postsMock.getAllPosts();
+    try {
+      const data = await postsMock.getAllPosts();
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error("Error fetching mock posts:", error);
+      return [];
+    }
   },
 
   /**
@@ -144,14 +212,21 @@ export const noticeboardApi = {
         `${API_BASE_URL}/posts/category/${encodeURIComponent(category)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(
         `Backend unavailable for getPostsByCategory("${category}"), using mock data`
       );
     }
-    return postsMock.getPostsByCategory(category);
+    try {
+      const data = await postsMock.getPostsByCategory(category);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error fetching mock posts by category:`, error);
+      return [];
+    }
   },
 
   /**
@@ -163,12 +238,19 @@ export const noticeboardApi = {
         `${API_BASE_URL}/posts/search?q=${encodeURIComponent(query)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for searchPosts("${query}"), using mock data`);
     }
-    return postsMock.searchPosts(query);
+    try {
+      const data = await postsMock.searchPosts(query);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error searching mock posts:`, error);
+      return [];
+    }
   },
 
   /**
@@ -188,12 +270,37 @@ export const noticeboardApi = {
         body: JSON.stringify({ title, content, category, authorId, authorName })
       });
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateObjectResponse(data) || {
+          id: 0,
+          title,
+          content,
+          category,
+          authorId,
+          authorName,
+          timestamp: new Date().toISOString(),
+          upvotes: 0
+        };
       }
     } catch (error) {
       console.warn("Backend unavailable for createPost, using mock data");
     }
-    return postsMock.createPost(title, content, category, authorId, authorName);
+    try {
+      const data = await postsMock.createPost(title, content, category, authorId, authorName);
+      return data;
+    } catch (error) {
+      console.error(`Error creating mock post:`, error);
+      return {
+        id: 0,
+        title,
+        content,
+        category,
+        authorId,
+        authorName,
+        timestamp: new Date().toISOString(),
+        upvotes: 0
+      };
+    }
   },
 
   /**
@@ -205,19 +312,32 @@ export const noticeboardApi = {
         method: "POST"
       });
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateObjectResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for upvotePost(${postId}), using mock data`);
     }
-    return postsMock.upvotePost(postId);
+    try {
+      const data = await postsMock.upvotePost(postId);
+      return validateObjectResponse(data);
+    } catch (error) {
+      console.error(`Error upvoting mock post:`, error);
+      return null;
+    }
   },
 
   /**
    * Get all categories
    */
   getCategories(): postsMock.PostCategory[] {
-    return postsMock.getCategories();
+    try {
+      const data = postsMock.getCategories();
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error("Error getting post categories:", error);
+      return [];
+    }
   }
 };
 
@@ -231,12 +351,19 @@ export const messagesApi = {
     try {
       const response = await fetchWithTimeout(`${API_BASE_URL}/conversations`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn("Backend unavailable for getConversations, using mock data");
     }
-    return messagesMock.getAllConversations();
+    try {
+      const data = await messagesMock.getAllConversations();
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error("Error fetching mock conversations:", error);
+      return [];
+    }
   },
 
   /**
@@ -246,12 +373,19 @@ export const messagesApi = {
     try {
       const response = await fetchWithTimeout(`${API_BASE_URL}/conversations/${id}`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateObjectResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for getConversationById(${id}), using mock data`);
     }
-    return messagesMock.getConversationById(id);
+    try {
+      const data = await messagesMock.getConversationById(id);
+      return validateObjectResponse(data);
+    } catch (error) {
+      console.error(`Error fetching mock conversation:`, error);
+      return null;
+    }
   },
 
   /**
@@ -263,14 +397,21 @@ export const messagesApi = {
         `${API_BASE_URL}/conversations/${conversationId}/messages`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(
         `Backend unavailable for getConversationMessages(${conversationId}), using mock data`
       );
     }
-    return messagesMock.getConversationMessages(conversationId);
+    try {
+      const data = await messagesMock.getConversationMessages(conversationId);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error fetching mock conversation messages:`, error);
+      return [];
+    }
   },
 
   /**
@@ -284,12 +425,27 @@ export const messagesApi = {
         body: JSON.stringify({ participantId, content })
       });
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateObjectResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for sendMessage to ${participantId}, using mock data`);
     }
-    return messagesMock.sendMessage(participantId, content);
+    try {
+      const data = await messagesMock.sendMessage(participantId, content);
+      return data;
+    } catch (error) {
+      console.error(`Error sending mock message:`, error);
+      return {
+        id: 0,
+        senderId: 0,
+        senderName: "You",
+        recipientId: participantId,
+        content,
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+    }
   },
 
   /**
@@ -311,7 +467,12 @@ export const messagesApi = {
         `Backend unavailable for markConversationAsRead(${conversationId}), using mock data`
       );
     }
-    return messagesMock.markConversationAsRead(conversationId);
+    try {
+      return await messagesMock.markConversationAsRead(conversationId);
+    } catch (error) {
+      console.error(`Error marking mock conversation as read:`, error);
+      return undefined;
+    }
   },
 
   /**
@@ -323,12 +484,19 @@ export const messagesApi = {
         `${API_BASE_URL}/conversations/search?q=${encodeURIComponent(query)}`
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateArrayResponse(data);
       }
     } catch (error) {
       console.warn(`Backend unavailable for searchConversations("${query}"), using mock data`);
     }
-    return messagesMock.searchConversations(query);
+    try {
+      const data = await messagesMock.searchConversations(query);
+      return validateArrayResponse(data);
+    } catch (error) {
+      console.error(`Error searching mock conversations:`, error);
+      return [];
+    }
   }
 };
 
